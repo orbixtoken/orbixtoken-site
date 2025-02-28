@@ -1,89 +1,78 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ethers } from "ethers";
-
-const ORBX_CONTRACT = "0x6449D2BF7D7464bc4121175ca9C89C6a00fdcCaF";
-const ORBX_ABI = [
-  "function balanceOf(address owner) view returns (uint256)",
-  "function transfer(address to, uint256 amount) returns (bool)",
-];
+import { FaInfoCircle, FaFacebook, FaTwitter, FaInstagram } from "react-icons/fa";
+import { BrowserProvider, formatEther } from "ethers";
+import "./globals.css";
 
 export default function Home() {
-  const [account, setAccount] = useState(null);
+  const [account, setAccount] = useState("");
   const [balance, setBalance] = useState("0");
   const [orbxBalance, setOrbxBalance] = useState("0");
   const [amount, setAmount] = useState("");
+  const [showModal, setShowModal] = useState(false); // Estado para exibir o modal
 
   useEffect(() => {
-    const loadWallet = async () => {
+    async function loadWeb3() {
       if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_requestAccounts",
-          });
-          setAccount(accounts[0]);
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+        setAccount(accounts[0]);
 
-          // 🚀 CORREÇÃO AQUI: Mudando de Web3Provider para BrowserProvider 🚀
-          const provider = new ethers.BrowserProvider(window.ethereum);
-          const signer = await provider.getSigner();
-
-          const balance = await provider.getBalance(accounts[0]);
-          setBalance(ethers.formatEther(balance));
-
-          const contract = new ethers.Contract(ORBX_CONTRACT, ORBX_ABI, provider);
-          const orbxBal = await contract.balanceOf(accounts[0]);
-          setOrbxBalance(ethers.formatEther(orbxBal));
-        } catch (error) {
-          console.error("Wallet connection failed", error);
-        }
+        const provider = new BrowserProvider(window.ethereum);
+        const balance = await provider.getBalance(accounts[0]);
+        setBalance(formatEther(balance));
       }
-    };
-    loadWallet();
+    }
+    loadWeb3();
   }, []);
 
-  const buyOrbx = async () => {
-    if (!account || !amount) return;
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const contract = new ethers.Contract(ORBX_CONTRACT, ORBX_ABI, signer);
-    try {
-      const tx = await contract.transfer(account, ethers.parseEther(amount));
-      await tx.wait();
-      alert("Compra de ORBX realizada com sucesso!");
-    } catch (error) {
-      console.error("Erro na compra", error);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6">
-      <header className="w-full py-4 bg-gray-800 text-center text-lg font-bold shadow-lg">
-        Orbix Token - A revolução das criptomoedas
-      </header>
+    <div className="container">
+      <h1 className="welcome-text">Bem vindo a Orbix</h1>
+      <h2 className="subtitle">Orbix Token - A revolução das criptomoedas</h2>
 
-      <main className="flex flex-col items-center justify-center mt-8">
-        <h1 className="text-4xl font-bold mb-4">Bem-vindo à Orbix</h1>
-        <p className="text-lg">
-          {account ? `Sua carteira: ${account}` : "Conecte sua MetaMask"}
-        </p>
-        <p className="mt-2 text-lg">Saldo: {balance} ETH</p>
-        <p className="mt-2 text-lg">Saldo ORBX: {orbxBalance} ORBX</p>
+      <p>Conecte sua MetaMask</p>
+      <p>Saldo: {balance} ETH</p>
+      <p>Saldo ORBX: {orbxBalance} ORBX</p>
 
-        <input
-          type="text"
-          placeholder="Quantidade de ORBX"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="p-2 mt-4 border rounded bg-gray-800 text-white"
-        />
+      <input
+        type="text"
+        placeholder="Quantidade de ORBX"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        className="input-field"
+      />
+      <button className="button">Comprar ORBX</button>
 
-        <button
-          onClick={buyOrbx}
-          className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-800 text-white rounded-lg shadow-md"
-        >
-          Comprar ORBX
+      <div className="button-container">
+        {/* Botão Sobre agora exibe o modal */}
+        <button className="button" onClick={() => setShowModal(true)}>
+          <FaInfoCircle /> Sobre
         </button>
-      </main>
+        <a href="https://www.facebook.com/seuFacebook" target="_blank" className="button">
+          <FaFacebook /> Facebook
+        </a>
+        <a href="https://x.com/ORBXTOKEN" target="_blank" className="button">
+          <FaTwitter /> Twitter
+        </a>
+        <a href="https://www.instagram.com/orbix_token?igsh=ZjJ6Z2xxdnJrOTlk" target="_blank" className="button">
+          <FaInstagram /> Instagram
+        </a>
+      </div>
+
+      {/* Modal com informações sobre a Orbix */}
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>Sobre a Orbix</h2>
+            <p>
+              A Orbix é uma criptomoeda inovadora, criada para trazer segurança e valorização no mercado financeiro digital.
+              Nosso compromisso é garantir transparência, confiabilidade e um futuro sólido para os investidores.
+              Com tecnologia avançada e suporte à blockchain da Polygon, a Orbix se destaca como uma moeda de alto potencial de crescimento.
+            </p>
+            <button className="close-button" onClick={() => setShowModal(false)}>Fechar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
