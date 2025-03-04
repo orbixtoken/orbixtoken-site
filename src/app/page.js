@@ -1,29 +1,83 @@
 "use client";
 import { useState, useEffect } from "react";
 import { FaInfoCircle, FaFacebook, FaTwitter, FaInstagram } from "react-icons/fa";
-import { BrowserProvider, formatEther } from "ethers";
+import { BrowserProvider, Contract, formatEther, formatUnits, parseUnits } from "ethers";
 import "./globals.css";
+
+// Endereço do contrato ORBX e ABI (deve ser substituído pelo contrato correto)
+const CONTRACT_ADDRESS = "0xSEU_CONTRATO_AQUI";
+const ABI = [
+  // ABI reduzida para interagir com o contrato
+  {
+    "constant": false,
+    "inputs": [{ "name": "_amount", "type": "uint256" }],
+    "name": "buyOrbix",
+    "outputs": [],
+    "payable": true,
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [{ "name": "_owner", "type": "address" }],
+    "name": "balanceOf",
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  }
+];
 
 export default function Home() {
   const [account, setAccount] = useState("");
   const [balance, setBalance] = useState("0");
   const [orbxBalance, setOrbxBalance] = useState("0");
   const [amount, setAmount] = useState("");
-  const [showModal, setShowModal] = useState(false); // Estado para exibir o modal
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     async function loadWeb3() {
       if (window.ethereum) {
-        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-        setAccount(accounts[0]);
+        try {
+          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          setAccount(accounts[0]);
 
-        const provider = new BrowserProvider(window.ethereum);
-        const balance = await provider.getBalance(accounts[0]);
-        setBalance(formatEther(balance));
+          const provider = new BrowserProvider(window.ethereum);
+          const balance = await provider.getBalance(accounts[0]);
+          setBalance(formatEther(balance));
+
+          const contract = new Contract(CONTRACT_ADDRESS, ABI, provider);
+          const orbxBalance = await contract.balanceOf(accounts[0]);
+          setOrbxBalance(formatUnits(orbxBalance, 18));
+        } catch (error) {
+          console.error("Erro ao conectar:", error);
+        }
       }
     }
     loadWeb3();
   }, []);
+
+  async function buyOrbix() {
+    if (!window.ethereum) {
+      alert("MetaMask não detectada!");
+      return;
+    }
+
+    try {
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new Contract(CONTRACT_ADDRESS, ABI, signer);
+
+      const tx = await contract.buyOrbix(parseUnits(amount, 18), { value: parseUnits("0.01", "ether") });
+      await tx.wait();
+
+      alert("Compra realizada com sucesso!");
+      window.location.reload();
+    } catch (error) {
+      console.error("Erro ao comprar ORBX:", error);
+      alert("Erro ao comprar ORBX. Verifique a MetaMask.");
+    }
+  }
 
   return (
     <div className="container">
@@ -41,10 +95,9 @@ export default function Home() {
         onChange={(e) => setAmount(e.target.value)}
         className="input-field"
       />
-      <button className="button">Comprar ORBX</button>
+      <button className="button" onClick={buyOrbix}>Comprar ORBX</button>
 
       <div className="button-container">
-        {/* Botão Sobre agora exibe o modal */}
         <button className="button" onClick={() => setShowModal(true)}>
           <FaInfoCircle /> Sobre
         </button>
@@ -59,7 +112,6 @@ export default function Home() {
         </a>
       </div>
 
-      {/* Modal com informações sobre a Orbix */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal">
