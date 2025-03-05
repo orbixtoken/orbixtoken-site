@@ -4,7 +4,7 @@ import { FaInfoCircle, FaFacebook, FaTwitter, FaInstagram } from "react-icons/fa
 import { BrowserProvider, Contract, formatUnits, parseUnits } from "ethers";
 import "./globals.css";
 
-const CONTRACT_ADDRESS = "0x6449D2BF7D7464bc4121175ca9C89C6a00fdcCaF"; // Contrato da Orbix na Polygon
+const CONTRACT_ADDRESS = "0x6449D2BF7D7464bc4121175ca9C89C6a00fdcCaF"; // Endereço correto do contrato ORBX
 const ABI = [
   {
     "inputs": [{ "internalType": "uint256", "name": "_amount", "type": "uint256" }],
@@ -68,8 +68,9 @@ export default function Home() {
       const contract = new Contract(CONTRACT_ADDRESS, ABI, signer);
 
       // Define o valor correto de MATIC a ser enviado
-      const maticValue = parseUnits((amount * 0.1).toString(), 18); // Supondo que 1 ORBX = 0.1 MATIC
+      const maticValue = parseUnits((amount * 0.1).toString(), 18); // Ajuste a taxa de conversão se necessário
 
+      console.log("Enviando transação para compra de ORBX...");
       const tx = await contract.buyTokens(amount, { value: maticValue });
       await tx.wait();
 
@@ -80,7 +81,13 @@ export default function Home() {
       setOrbxBalance(formatUnits(updatedBalance, 18));
     } catch (error) {
       console.error("Erro na compra:", error);
-      alert("Erro ao comprar ORBX. Verifique a MetaMask, o saldo de MATIC e tente novamente.");
+
+      // Detecta erro de saldo insuficiente
+      if (error.message.includes("insufficient funds")) {
+        alert("Erro ao comprar ORBX: saldo insuficiente de MATIC.");
+      } else {
+        alert("Erro ao comprar ORBX. Verifique a MetaMask e tente novamente.");
+      }
     }
   };
 
