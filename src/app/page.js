@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { FaInfoCircle, FaFacebook, FaTwitter, FaInstagram } from "react-icons/fa";
+import { FaInfoCircle, FaTwitter, FaInstagram } from "react-icons/fa";
 import { BrowserProvider, Contract, formatEther, parseEther } from "ethers";
 import "./globals.css";
 
@@ -35,7 +35,7 @@ export default function Home() {
         try {
           await window.ethereum.request({
             method: "wallet_switchEthereumChain",
-            params: [{ chainId: "0x89" }]
+            params: [{ chainId: "0x89" }] // Garante que a Polygon está selecionada
           });
 
           const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
@@ -74,8 +74,10 @@ export default function Home() {
       const signer = await provider.getSigner();
       const contract = new Contract(CONTRACT_ADDRESS, ABI, signer);
 
-      const pricePerOrbix = "0.01";
-      const totalCost = parseEther((Number(amount) * Number(pricePerOrbix)).toString());
+      const pricePerOrbix = 0.01; // Preço de cada ORBX em MATIC
+      const totalCost = parseEther((Number(amount) * pricePerOrbix).toString());
+
+      console.log("Enviando transação com valor:", totalCost.toString(), "MATIC");
 
       const tx = await contract.buyOrbix(amount, { value: totalCost });
       await tx.wait();
