@@ -6,7 +6,6 @@ import "./globals.css";
 
 const CONTRACT_ADDRESS = "0x6449D2BF7D7464bc4121175ca9C89C6a00fdcCaF"; // Contrato da Orbix na Polygon
 const ABI = [
-  // ABI da função de compra do contrato
   {
     "inputs": [{ "internalType": "uint256", "name": "_amount", "type": "uint256" }],
     "name": "buyTokens",
@@ -33,17 +32,21 @@ export default function Home() {
   useEffect(() => {
     async function loadWeb3() {
       if (window.ethereum) {
-        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-        setAccount(accounts[0]);
+        try {
+          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          setAccount(accounts[0]);
 
-        const provider = new BrowserProvider(window.ethereum);
-        const balance = await provider.getBalance(accounts[0]);
-        setBalance(formatUnits(balance, 18));
+          const provider = new BrowserProvider(window.ethereum);
+          const balance = await provider.getBalance(accounts[0]);
+          setBalance(formatUnits(balance, 18));
 
-        // Carrega o saldo de ORBX do usuário
-        const contract = new Contract(CONTRACT_ADDRESS, ABI, provider);
-        const orbxBal = await contract.balanceOf(accounts[0]);
-        setOrbxBalance(formatUnits(orbxBal, 18));
+          // Atualiza saldo de ORBX
+          const contract = new Contract(CONTRACT_ADDRESS, ABI, provider);
+          const orbxBal = await contract.balanceOf(accounts[0]);
+          setOrbxBalance(formatUnits(orbxBal, 18));
+        } catch (error) {
+          console.error("Erro ao conectar carteira:", error);
+        }
       }
     }
     loadWeb3();
@@ -64,20 +67,20 @@ export default function Home() {
       const signer = await provider.getSigner();
       const contract = new Contract(CONTRACT_ADDRESS, ABI, signer);
 
-      // Define o valor em MATIC a ser enviado com a compra
-      const maticValue = parseUnits((amount * 0.1).toString(), 18); // Preço hipotético: 0.1 MATIC por ORBX
+      // Define o valor correto de MATIC a ser enviado
+      const maticValue = parseUnits((amount * 0.1).toString(), 18); // Supondo que 1 ORBX = 0.1 MATIC
 
       const tx = await contract.buyTokens(amount, { value: maticValue });
       await tx.wait();
 
       alert(`Compra de ${amount} ORBX realizada com sucesso!`);
 
-      // Atualiza o saldo após a compra
+      // Atualiza saldo de ORBX
       const updatedBalance = await contract.balanceOf(account);
       setOrbxBalance(formatUnits(updatedBalance, 18));
     } catch (error) {
       console.error("Erro na compra:", error);
-      alert("Erro ao comprar ORBX. Verifique a MetaMask e tente novamente.");
+      alert("Erro ao comprar ORBX. Verifique a MetaMask, o saldo de MATIC e tente novamente.");
     }
   };
 
