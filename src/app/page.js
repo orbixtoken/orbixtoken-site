@@ -1,28 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
+import { ethers } from "ethers";
 import { FaInfoCircle, FaFacebook, FaTwitter, FaInstagram } from "react-icons/fa";
-import { BrowserProvider, Contract, formatUnits, parseUnits } from "ethers";
 import "./globals.css";
 
+// Endereço do contrato ORBX na Polygon
 const CONTRACT_ADDRESS = "0x6449D2BF7D7464bc4121175ca9C89C6a00fdcCaF";
+
+// ABI mínima para a compra de tokens
 const ABI = [
-  {
-    "constant": false,
-    "inputs": [{ "name": "amount", "type": "uint256" }],
-    "name": "buyTokens",
-    "outputs": [],
-    "payable": true,
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [{ "name": "account", "type": "address" }],
-    "name": "balanceOf",
-    "outputs": [{ "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  }
+  "function buyTokens(uint256 amount) public payable",
+  "function balanceOf(address owner) view returns (uint256)"
 ];
 
 export default function Home() {
@@ -30,49 +18,57 @@ export default function Home() {
   const [balance, setBalance] = useState("0");
   const [orbxBalance, setOrbxBalance] = useState("0");
   const [amount, setAmount] = useState("");
-  const [provider, setProvider] = useState(null);
 
   useEffect(() => {
     async function loadWeb3() {
       if (window.ethereum) {
-        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-        setAccount(accounts[0]);
+        try {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          setAccount(accounts[0]);
 
-        const provider = new BrowserProvider(window.ethereum);
-        setProvider(provider);
+          // Carrega o saldo de MATIC
+          const balance = await provider.getBalance(accounts[0]);
+          setBalance(ethers.formatEther(balance));
 
-        const balance = await provider.getBalance(accounts[0]);
-        setBalance(formatUnits(balance, "ether"));
-
-        const contract = new Contract(CONTRACT_ADDRESS, ABI, provider);
-        const orbxBalance = await contract.balanceOf(accounts[0]);
-        setOrbxBalance(formatUnits(orbxBalance, "ether"));
+          // Carrega o saldo de ORBX
+          const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+          const orbxBalance = await contract.balanceOf(accounts[0]);
+          setOrbxBalance(ethers.formatUnits(orbxBalance, 18));
+        } catch (error) {
+          console.error("Erro ao carregar Web3:", error);
+        }
+      } else {
+        alert("Por favor, instale a MetaMask para usar este site.");
       }
     }
     loadWeb3();
   }, []);
 
-  async function buyOrbix() {
-    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
-      alert("Digite um valor válido para comprar ORBX.");
+  // Função para comprar ORBX
+  const buyOrbx = async () => {
+    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+      alert("Digite uma quantidade válida de ORBX.");
       return;
     }
 
     try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const contract = new Contract(CONTRACT_ADDRESS, ABI, signer);
-      const value = parseUnits(amount, "ether");
-      
-      const tx = await contract.buyTokens(value, { value: value });
-      await tx.wait();
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-      alert("Compra de ORBX realizada com sucesso!");
-      window.location.reload();
+      // Calcula o valor em WEI (MATIC necessário)
+      const maticAmount = ethers.parseUnits("0.1", "ether"); // Defina um valor fixo para o custo do token
+      
+      const tx = await contract.buyTokens(ethers.parseUnits(amount, 18), { value: maticAmount });
+      await tx.wait();
+      alert("Compra realizada com sucesso!");
     } catch (error) {
       console.error("Erro na compra:", error);
       alert("Erro ao comprar ORBX. Verifique a MetaMask e tente novamente.");
     }
-  }
+  };
 
   return (
     <div className="container">
@@ -90,16 +86,13 @@ export default function Home() {
         onChange={(e) => setAmount(e.target.value)}
         className="input-field"
       />
-      <button className="button" onClick={buyOrbix}>Comprar ORBX</button>
+      <button onClick={buyOrbx} className="button">Comprar ORBX</button>
 
       <div className="button-container">
-        <a href="https://www.facebook.com/seuFacebook" target="_blank" className="button">
-          <FaFacebook /> Facebook
-        </a>
         <a href="https://x.com/ORBXTOKEN" target="_blank" className="button">
           <FaTwitter /> Twitter
         </a>
-        <a href="https://www.instagram.com/orbix_token?igsh=ZjJ6Z2xxdnJrOTlk" target="_blank" className="button">
+        <a href="https://www.instagram.com/orbix_token" target="_blank" className="button">
           <FaInstagram /> Instagram
         </a>
       </div>
