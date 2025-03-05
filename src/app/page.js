@@ -4,7 +4,7 @@ import { FaInfoCircle, FaTwitter, FaInstagram } from "react-icons/fa";
 import { BrowserProvider, Contract, parseUnits, formatUnits } from "ethers";
 import "./globals.css";
 
-// Configuração do contrato ORBX na Polygon
+// Configuração do contrato ORBX na rede Polygon
 const CONTRACT_ADDRESS = "0x6449D2BF7D7464bc4121175ca9C89C6a00fdcCaF";
 const ABI = [
   "function transfer(address to, uint256 amount) public returns (bool)",
@@ -47,12 +47,13 @@ export default function Home() {
       const contract = new Contract(CONTRACT_ADDRESS, ABI, signer);
 
       const userBalance = await provider.getBalance(account);
-      const requiredMatic = parseUnits("0.1", 18); // Taxa mínima para gas
+      const requiredMatic = parseUnits("0.01", 18); // Taxa mínima para gas
 
       if (userBalance.lt(requiredMatic)) {
-        return alert("Saldo de MATIC insuficiente para gas fee!");
+        return alert("Saldo de MATIC insuficiente para taxa de gas!");
       }
 
+      // Transação de compra de ORBX
       const tx = await contract.transfer(account, parseUnits(amount, 18));
       await tx.wait();
 

@@ -1,6 +1,7 @@
 body {
   background-image: url("/orbix-coin.png");
   background-size: cover;
+  background-position: center;
   background-attachment: fixed;
   color: #fff;
   font-family: Arial, sans-serif;
@@ -11,9 +12,10 @@ body {
 .container {
   max-width: 600px;
   margin: 5% auto;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
   padding: 20px;
   border-radius: 10px;
+  box-shadow: 0 0 15px rgba(255, 255, 0, 0.8);
 }
 
 .welcome-text {
@@ -34,23 +36,30 @@ body {
   border-radius: 5px;
   border: none;
   text-align: center;
+  font-size: 16px;
 }
 
 .button {
   background: yellow;
   color: black;
-  padding: 10px;
+  padding: 12px;
   margin: 10px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   font-weight: bold;
+  transition: background 0.3s ease;
+}
+
+.button:hover {
+  background: gold;
 }
 
 .button-container {
   display: flex;
   justify-content: center;
   gap: 10px;
+  margin-top: 15px;
 }
 
 .modal-overlay {
