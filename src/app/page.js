@@ -70,7 +70,8 @@ export default function Home() {
       // Define o valor correto de MATIC a ser enviado
       const maticValue = parseUnits((amount * 0.1).toString(), 18); // Ajuste a taxa de conversão se necessário
 
-      console.log("Enviando transação para compra de ORBX...");
+      console.log(`Tentando comprar ${amount} ORBX por ${maticValue.toString()} MATIC`);
+
       const tx = await contract.buyTokens(amount, { value: maticValue });
       await tx.wait();
 
@@ -85,6 +86,8 @@ export default function Home() {
       // Detecta erro de saldo insuficiente
       if (error.message.includes("insufficient funds")) {
         alert("Erro ao comprar ORBX: saldo insuficiente de MATIC.");
+      } else if (error.message.includes("CALL_EXCEPTION")) {
+        alert("Erro ao chamar a função no contrato. Verifique se o contrato está correto.");
       } else {
         alert("Erro ao comprar ORBX. Verifique a MetaMask e tente novamente.");
       }
