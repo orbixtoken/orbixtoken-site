@@ -4,7 +4,7 @@ import { FaInfoCircle, FaTwitter, FaInstagram } from "react-icons/fa";
 import { BrowserProvider, Contract, formatEther, parseEther } from "ethers";
 import "./globals.css";
 
-const CONTRACT_ADDRESS = "0x6449D2BF7D7464bc4121175ca9C89C6a00fdcCaF"; // Endereço do contrato ORBX na Polygon
+const CONTRACT_ADDRESS = "0x6449D2BF7D7464bc4121175ca9C89C6a00fdcCaF"; // Contrato ORBX
 const ABI = [
   {
     "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
@@ -35,7 +35,7 @@ export default function Home() {
         try {
           await window.ethereum.request({
             method: "wallet_switchEthereumChain",
-            params: [{ chainId: "0x89" }] // Garante que a Polygon está selecionada
+            params: [{ chainId: "0x89" }] // Polygon Mainnet
           });
 
           const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
@@ -49,7 +49,6 @@ export default function Home() {
           const contract = new Contract(CONTRACT_ADDRESS, ABI, signer);
           const orbxBal = await contract.balanceOf(accounts[0]);
           setOrbxBalance(formatEther(orbxBal));
-
         } catch (error) {
           console.error("Erro ao conectar:", error);
         }
@@ -77,19 +76,18 @@ export default function Home() {
       const pricePerOrbix = 0.01; // Preço de cada ORBX em MATIC
       const totalCost = parseEther((Number(amount) * pricePerOrbix).toString());
 
-      console.log("Enviando transação com valor:", totalCost.toString(), "MATIC");
+      console.log("Comprando ORBX:", amount, "Custo total:", totalCost.toString(), "MATIC");
 
-      const tx = await contract.buyOrbix(amount, { value: totalCost });
+      const tx = await contract.buyOrbix(parseEther(amount), { value: totalCost });
       await tx.wait();
 
       alert(`Compra de ${amount} ORBX realizada com sucesso!`);
 
       const orbxBal = await contract.balanceOf(account);
       setOrbxBalance(formatEther(orbxBal));
-
     } catch (error) {
       console.error("Erro na compra:", error);
-      alert("Erro ao comprar ORBX. Verifique a MetaMask e o saldo de MATIC.");
+      alert("Erro ao comprar ORBX. Verifique se há MATIC suficiente e tente novamente.");
     }
   }
 
@@ -97,11 +95,9 @@ export default function Home() {
     <div className="container">
       <h1 className="welcome-text">Bem vindo a Orbix</h1>
       <h2 className="subtitle">Orbix Token - A revolução das criptomoedas</h2>
-
       <p>Conecte sua MetaMask</p>
       <p>Saldo: {balance} MATIC</p>
       <p>Saldo ORBX: {orbxBalance} ORBX</p>
-
       <input
         type="text"
         placeholder="Quantidade de ORBX"
@@ -110,7 +106,6 @@ export default function Home() {
         className="input-field"
       />
       <button className="button" onClick={handleBuyOrbix}>Comprar ORBX</button>
-
       <div className="button-container">
         <button className="button" onClick={() => setShowModal(true)}>
           <FaInfoCircle /> Sobre
@@ -122,14 +117,11 @@ export default function Home() {
           <FaInstagram /> Instagram
         </a>
       </div>
-
       {showModal && (
         <div className="modal-overlay">
           <div className="modal">
             <h2>Sobre a Orbix</h2>
-            <p>
-              A Orbix é uma criptomoeda inovadora, criada para trazer segurança e valorização no mercado financeiro digital.
-            </p>
+            <p>A Orbix é uma criptomoeda inovadora criada para trazer segurança e valorização no mercado digital.</p>
             <button className="close-button" onClick={() => setShowModal(false)}>Fechar</button>
           </div>
         </div>
