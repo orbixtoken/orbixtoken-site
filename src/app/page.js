@@ -1,16 +1,25 @@
 "use client";
 import { useState, useEffect } from "react";
 import { FaInfoCircle, FaFacebook, FaTwitter, FaInstagram } from "react-icons/fa";
-import { BrowserProvider, Contract, formatUnits, parseUnits, parseEther } from "ethers";
+import { BrowserProvider, Contract, formatEther, parseEther } from "ethers";
 import "./globals.css";
 
-// Endereço do contrato na Polygon
-const CONTRACT_ADDRESS = "0x6449D2BF7D7464bc4121175ca9C89C6a00fdcCaF";
-
-// ABI do contrato (substitua pela sua ABI correta)
+const CONTRACT_ADDRESS = "0x6449D2BF7D7464bc4121175ca9C89C6a00fdcCaF"; // Endereço do contrato ORBX na Polygon
 const ABI = [
-  "function balanceOf(address owner) view returns (uint256)",
-  "function buyTokens(uint256 amount) payable"
+  {
+    "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
+    "name": "buyOrbix",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
+    "name": "balanceOf",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  }
 ];
 
 export default function Home() {
@@ -18,93 +27,67 @@ export default function Home() {
   const [balance, setBalance] = useState("0");
   const [orbxBalance, setOrbxBalance] = useState("0");
   const [amount, setAmount] = useState("");
-  const [provider, setProvider] = useState(null);
-  const [contract, setContract] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     async function loadWeb3() {
       if (window.ethereum) {
         try {
+          await window.ethereum.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: "0x89" }]
+          });
+
           const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
           setAccount(accounts[0]);
 
-          const web3Provider = new BrowserProvider(window.ethereum);
-          setProvider(web3Provider);
+          const provider = new BrowserProvider(window.ethereum);
+          const balance = await provider.getBalance(accounts[0]);
+          setBalance(formatEther(balance));
 
-          const signer = await web3Provider.getSigner();
-          const contractInstance = new Contract(CONTRACT_ADDRESS, ABI, signer);
-          setContract(contractInstance);
-
-          // Carrega os saldos
-          const ethBalance = await web3Provider.getBalance(accounts[0]);
-          setBalance(formatUnits(ethBalance, 18));
-
-          const tokenBalance = await contractInstance.balanceOf(accounts[0]);
-          setOrbxBalance(formatUnits(tokenBalance, 18));
+          const signer = await provider.getSigner();
+          const contract = new Contract(CONTRACT_ADDRESS, ABI, signer);
+          const orbxBal = await contract.balanceOf(accounts[0]);
+          setOrbxBalance(formatEther(orbxBal));
 
         } catch (error) {
-          console.error("Erro ao conectar com MetaMask:", error);
+          console.error("Erro ao conectar:", error);
         }
       }
     }
     loadWeb3();
   }, []);
 
-  // Função para verificar se a MetaMask está na rede Polygon
-  async function checkNetwork() {
-    if (window.ethereum) {
-      const chainId = await window.ethereum.request({ method: "eth_chainId" });
-      if (chainId !== "0x89") { // ID da rede Polygon Mainnet
-        alert("Por favor, conecte-se à rede Polygon na MetaMask!");
-        return false;
-      }
-      return true;
-    }
-    alert("MetaMask não detectada.");
-    return false;
-  }
-
-  // Função para comprar ORBX
-  async function handleBuyTokens() {
-    if (!contract || !provider) {
-      alert("Erro: Contrato não conectado. Verifique sua MetaMask.");
+  async function handleBuyOrbix() {
+    if (!window.ethereum) {
+      alert("MetaMask não detectada. Por favor, instale a MetaMask.");
       return;
     }
 
-    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
-      alert("Insira um valor válido para comprar ORBX.");
+    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+      alert("Digite uma quantidade válida de ORBX.");
       return;
     }
-
-    const isPolygon = await checkNetwork();
-    if (!isPolygon) return;
 
     try {
+      const provider = new BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const pricePerToken = parseEther("0.01"); // Ajuste o preço por token, se necessário
-      const totalCost = pricePerToken * parseFloat(amount);
+      const contract = new Contract(CONTRACT_ADDRESS, ABI, signer);
 
-      // Confirmação antes da compra
-      const confirm = window.confirm(`Você deseja comprar ${amount} ORBX por ${totalCost} MATIC?`);
-      if (!confirm) return;
+      const pricePerOrbix = "0.01";
+      const totalCost = parseEther((Number(amount) * Number(pricePerOrbix)).toString());
 
-      // Enviando transação para o contrato
-      const tx = await contract.connect(signer).buyTokens(parseUnits(amount, 18), {
-        value: totalCost.toString(),
-        gasLimit: 200000
-      });
-
+      const tx = await contract.buyOrbix(amount, { value: totalCost });
       await tx.wait();
-      alert(`Compra de ${amount} ORBX realizada com sucesso na Polygon!`);
 
-      // Atualiza o saldo de ORBX após a compra
-      const updatedBalance = await contract.balanceOf(account);
-      setOrbxBalance(formatUnits(updatedBalance, 18));
+      alert(`Compra de ${amount} ORBX realizada com sucesso!`);
+
+      const orbxBal = await contract.balanceOf(account);
+      setOrbxBalance(formatEther(orbxBal));
 
     } catch (error) {
-      console.error("Erro ao comprar ORBX na Polygon:", error);
-      alert("Erro ao comprar ORBX. Verifique a MetaMask e se há MATIC suficiente para a compra.");
+      console.error("Erro na compra:", error);
+      alert("Erro ao comprar ORBX. Verifique a MetaMask e o saldo de MATIC.");
     }
   }
 
@@ -124,15 +107,12 @@ export default function Home() {
         onChange={(e) => setAmount(e.target.value)}
         className="input-field"
       />
-      <button className="button" onClick={handleBuyTokens}>Comprar ORBX</button>
+      <button className="button" onClick={handleBuyOrbix}>Comprar ORBX</button>
 
       <div className="button-container">
         <button className="button" onClick={() => setShowModal(true)}>
           <FaInfoCircle /> Sobre
         </button>
-        <a href="https://www.facebook.com/seuFacebook" target="_blank" className="button">
-          <FaFacebook /> Facebook
-        </a>
         <a href="https://x.com/ORBXTOKEN" target="_blank" className="button">
           <FaTwitter /> Twitter
         </a>
@@ -146,7 +126,7 @@ export default function Home() {
           <div className="modal">
             <h2>Sobre a Orbix</h2>
             <p>
-              A Orbix é uma criptomoeda inovadora criada na rede Polygon, garantindo segurança, escalabilidade e baixas taxas de transação.
+              A Orbix é uma criptomoeda inovadora, criada para trazer segurança e valorização no mercado financeiro digital.
             </p>
             <button className="close-button" onClick={() => setShowModal(false)}>Fechar</button>
           </div>
